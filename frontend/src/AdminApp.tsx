@@ -12,6 +12,7 @@ import {
   Settings2,
   ShieldCheck,
 } from 'lucide-react'
+import { ThemeToggle } from './components/ThemeToggle'
 import { fetchAdminConfig, updateAdminConfig } from './lib/api'
 import type { AdminConfig, AdminConfigResponse, AdminGroup } from './types'
 import './admin.css'
@@ -36,6 +37,7 @@ function emptyConfig(): AdminConfig {
     sub2api_monitor_api_key: '',
     sub2api_monitor_group_api_keys: '',
     sub2api_monitor_models: [],
+    sub2api_monitor_group_models: {},
     sub2api_monitor_model_sources: ['groups', 'configured'],
     sub2api_monitor_usage_model_limit: 10,
     sub2api_monitor_timeout_seconds: 18,
@@ -56,6 +58,14 @@ function splitModels(text: string): string[] {
 
 function modelText(config: AdminConfig): string {
   return config.sub2api_monitor_models.join('\n')
+}
+
+function groupModelText(config: AdminConfig, groupId: number): string {
+  return (config.sub2api_monitor_group_models[String(groupId)] ?? []).join('\n')
+}
+
+function hasGroupModelOverride(config: AdminConfig, groupId: number): boolean {
+  return Object.prototype.hasOwnProperty.call(config.sub2api_monitor_group_models, String(groupId))
 }
 
 function groupKeyPlaceholder(groups: AdminGroup[]): string {
@@ -152,6 +162,17 @@ export default function AdminApp() {
     patch({ sub2api_monitor_model_sources: [...next] })
   }
 
+  function updateGroupModels(groupId: number, value: string) {
+    const next = { ...config.sub2api_monitor_group_models }
+    const models = splitModels(value)
+    if (models.length > 0) {
+      next[String(groupId)] = models
+    } else {
+      delete next[String(groupId)]
+    }
+    patch({ sub2api_monitor_group_models: next })
+  }
+
   async function save() {
     if (!token.trim()) {
       setError('请先输入 admin token')
@@ -189,6 +210,7 @@ export default function AdminApp() {
   }
 
   const groups = data?.available_groups ?? []
+  const modelConfigGroups = groups.filter((group) => selectedGroupIds.size === 0 || selectedGroupIds.has(group.id))
   const envFile = data?.env_file ?? '.env'
 
   return (
@@ -207,6 +229,7 @@ export default function AdminApp() {
             <p>此页面没有主站入口，只能直接访问 <code>/admin</code>。保存后会写入运行时环境配置，并立刻刷新一次状态快照。</p>
           </div>
           <div className="admin-hero__actions">
+            <ThemeToggle />
             {data ? <span className="admin-env-pill">env: {envFile}</span> : null}
             {token ? (
               <button className="admin-button admin-button--ghost" type="button" onClick={logout}>
@@ -345,13 +368,41 @@ export default function AdminApp() {
                 </div>
 
                 <div className="admin-field">
-                  <label>手动模型列表</label>
+                  <label>全局手动模型列表</label>
                   <textarea
                     rows={5}
                     value={modelsDraft}
                     onChange={(event) => setModelsDraft(event.target.value)}
                     placeholder={'gpt-5.4\ngpt-5.4-mini\ngpt-5.3-codex'}
                   />
+                  <small>开启“手动列表”来源时生效；没有单独配置的分组会使用这个全局列表。</small>
+                </div>
+
+                <div className="admin-field">
+                  <label>按分组覆盖手动模型</label>
+                  <div className="group-model-grid">
+                    {modelConfigGroups.map((group) => {
+                      const overridden = hasGroupModelOverride(config, group.id)
+                      return (
+                        <section key={group.id} className={`group-model-card ${overridden ? 'is-overridden' : ''}`}>
+                          <div className="group-model-card__head">
+                            <div>
+                              <strong>{group.name}</strong>
+                              <small>#{group.id} · {group.platform} · {group.account_count} 号</small>
+                            </div>
+                            <span>{overridden ? '单独配置' : '沿用全局'}</span>
+                          </div>
+                          <textarea
+                            rows={4}
+                            value={groupModelText(config, group.id)}
+                            onChange={(event) => updateGroupModels(group.id, event.target.value)}
+                            placeholder="留空沿用全局；一行一个模型"
+                          />
+                        </section>
+                      )
+                    })}
+                  </div>
+                  <small>这里配置后，该分组会用自己的手动模型列表；留空则继续沿用全局手动模型列表。</small>
                 </div>
 
                 <div className="admin-form-grid admin-form-grid--compact">

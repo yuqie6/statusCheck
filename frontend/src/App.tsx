@@ -11,6 +11,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react'
+import { ThemeToggle } from './components/ThemeToggle'
 import { fetchDashboard } from './lib/api'
 import {
   formatDateTime,
@@ -412,6 +413,7 @@ export default function App() {
               <strong>{heroState.title}</strong>
               <p>{heroState.note}</p>
             </div>
+            <ThemeToggle />
             <button
               onClick={() => void load()}
               disabled={refreshing}
