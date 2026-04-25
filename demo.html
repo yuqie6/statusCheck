@@ -1,0 +1,309 @@
+import React, { useState, useEffect } from 'react';
+import {
+Activity,
+Database,
+Key,
+DollarSign,
+CheckCircle2,
+AlertTriangle,
+XCircle,
+Clock,
+RefreshCw,
+Server
+} from 'lucide-react';
+
+// --- [子组件] 顶部统计卡片 ---
+// 为什么封装这个：统计卡片是高频复用的 UI，封装后可以统一调整阴影、圆角和字体大小
+const StatCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
+<div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex justify-between items-start">
+        <div>
+            <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
+            <h3 className="text-2xl font-bold text-gray-800">{value}</h3>
+            {subtext && <p className="text-xs text-gray-400 mt-2">{subtext}</p>}
+            {trend && (
+            <p className={`text-xs mt-2 font-medium ${trend> 0 ? 'text-green-600' : 'text-red-500'}`}>
+                {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}% vs 昨日
+            </p>
+            )}
+        </div>
+        <div className={`p-3 rounded-xl ${colorClass}`}>
+            <Icon size={24} className="text-current" />
+        </div>
+    </div>
+</div>
+);
+
+// --- [子组件] 状态徽标 ---
+// 为什么封装这个：统一管理状态颜色，避免到处写 if-else 拼 className
+const StatusBadge = ({ status }) => {
+const styles = {
+healthy: "bg-green-100 text-green-700 border-green-200",
+degraded: "bg-yellow-100 text-yellow-700 border-yellow-200",
+down: "bg-red-100 text-red-700 border-red-200"
+};
+
+const icons = {
+healthy:
+<CheckCircle2 size={14} className="mr-1" />,
+degraded:
+<AlertTriangle size={14} className="mr-1" />,
+down:
+<XCircle size={14} className="mr-1" />
+};
+
+const labels = {
+healthy: "运行正常",
+degraded: "存在延迟/降级",
+down: "服务不可用"
+};
+
+return (
+<span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status]}`}>
+    {icons[status]}
+    {labels[status]}
+</span>
+);
+};
+
+// --- [主组件] 监控大盘 ---
+export default function ApiMonitorDashboard() {
+const [isLoading, setIsLoading] = useState(true);
+const [lastUpdated, setLastUpdated] = useState(new Date());
+
+// 【核心数据结构 1】全局聚合数据
+// 后端需要提供一个类似 /api/admin/summary 的接口返回这些数据
+const [summary, setSummary] = useState({
+estimatedQuota: 0,
+usedQuota: 0,
+totalKeys: 0,
+activeKeys: 0,
+overallSuccessRate: 0,
+rpm: 0
+});
+
+// 【核心数据结构 2】模型可用性矩阵
+// 后端需要提供 /api/admin/models/metrics 返回各模型的实时健康度
+const [models, setModels] = useState([]);
+
+// 【核心数据结构 3】号池状态分布
+// 后端需要提供 /api/admin/keys/distribution 帮助分析封号重灾区
+const [keyPool, setKeyPool] = useState({
+active: 0,
+rateLimited: 0,
+banned: 0,
+exhausted: 0
+});
+
+// 模拟从后端抓取数据
+const fetchData = async () => {
+setIsLoading(true);
+// 模拟网络延迟
+await new Promise(resolve => setTimeout(resolve, 800));
+
+setSummary({
+estimatedQuota: 12450.50, // 预估总额度 ($)
+usedQuota: 8230.20,
+totalKeys: 156,
+activeKeys: 142,
+overallSuccessRate: 98.5,
+rpm: 3420 // 每分钟请求数
+});
+
+setModels([
+{ id: 'gpt-4o', provider: 'OpenAI', latency: 450, successRate: 99.8, status: 'healthy', tpm: 125000 },
+{ id: 'claude-3-5-sonnet', provider: 'Anthropic', latency: 850, successRate: 95.2, status: 'degraded', tpm: 85000 },
+{ id: 'gemini-1.5-pro', provider: 'Google', latency: 620, successRate: 99.1, status: 'healthy', tpm: 42000 },
+{ id: 'gpt-4-vision-preview', provider: 'OpenAI', latency: 3200, successRate: 45.0, status: 'down', tpm: 1200 },
+{ id: 'midjourney-v6', provider: 'Proxy', latency: 1500, successRate: 88.5, status: 'degraded', tpm: 300 }
+]);
+
+setKeyPool({
+active: 142,
+rateLimited: 8,
+banned: 4,
+exhausted: 2
+});
+
+setLastUpdated(new Date());
+setIsLoading(false);
+};
+
+useEffect(() => {
+fetchData();
+// 实际生产中，这里可以设置个定时器 setInterval(fetchData, 30000) 每30秒刷新
+}, []);
+
+// 计算进度条宽度百分比
+const getPercent = (value, total) => total === 0 ? 0 : Math.round((value / total) * 100);
+const remainingQuota = summary.estimatedQuota - summary.usedQuota;
+
+return (
+<div className="min-h-screen bg-gray-50 text-gray-800 font-sans p-6">
+    <div className="max-w-7xl mx-auto space-y-6">
+
+        {/* --- 头部栏 --- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Server className="text-indigo-600" />
+                    API 模型中转站监控中心
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">实时监控号池健康度、模型响应延迟及额度消耗</p>
+            </div>
+            <button onClick={fetchData} disabled={isLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm">
+                <RefreshCw size={16} className={isLoading ? "animate-spin" : "" } />
+                {isLoading ? '刷新中...' : `最后更新: ${lastUpdated.toLocaleTimeString()}`}
+            </button>
+        </div>
+
+        {/* --- 第一层：全局核心指标概览 --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatCard title="剩余可用预估额度" value={`$${remainingQuota.toLocaleString('en-US', {minimumFractionDigits: 2})}`}
+                subtext={`总额度: $${summary.estimatedQuota.toLocaleString()} | 已用:
+                $${summary.usedQuota.toLocaleString()}`} icon={DollarSign} colorClass="bg-blue-50 text-blue-600"
+                trend={-2.4} />
+            <StatCard title="号池存活状态" value={`${summary.activeKeys} / ${summary.totalKeys}`}
+                subtext="健康存活 Key 数量 / 录入总数量" icon={Key} colorClass="bg-emerald-50 text-emerald-600" />
+            <StatCard title="全局当前并发 (RPM)" value={summary.rpm.toLocaleString()} subtext="Requests Per Minute"
+                icon={Activity} colorClass="bg-purple-50 text-purple-600" trend={15.2} />
+            <StatCard title="全局成功率 (24h)" value={`${summary.overallSuccessRate}%`} subtext="基于 HTTP 200 响应统计"
+                icon={Database} colorClass={summary.overallSuccessRate> 95 ? "bg-green-50 text-green-600" :
+                "bg-orange-50 text-orange-600"}
+                />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* --- 第二层：模型可用性矩阵 (占左侧2/3) --- */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-white">
+                    <h2 className="text-lg font-semibold text-gray-800">各模型路由可用性监控</h2>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left">
+                        <thead className="text-xs text-gray-500 uppercase bg-gray-50">
+                            <tr>
+                                <th className="px-6 py-3">模型名称 (Model)</th>
+                                <th className="px-6 py-3">状态</th>
+                                <th className="px-6 py-3">平均延迟</th>
+                                <th className="px-6 py-3">成功率</th>
+                                <th className="px-6 py-3 text-right">当前负载 (TPM)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                            {models.map((model) => (
+                            <tr key={model.id} className="hover:bg-gray-50/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-gray-900 flex flex-col">
+                                    <span>{model.id}</span>
+                                    <span className="text-xs text-gray-400 font-normal">{model.provider}</span>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <StatusBadge status={model.status} />
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-1.5">
+                                        <Clock size={14} className={model.latency> 1000 ? "text-orange-500" :
+                                            "text-gray-400"} />
+                                            <span className={model.latency> 1000 ? "text-orange-600 font-medium" : ""}>
+                                                {model.latency} ms
+                                            </span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                                            <div className={`h-1.5 rounded-full ${model.successRate> 95 ? 'bg-green-500'
+                                                : model.successRate > 80 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                style={{ width: `${model.successRate}%` }}
+                                                ></div>
+                                        </div>
+                                        <span>{model.successRate}%</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-right tabular-nums text-gray-600">
+                                    {model.tpm.toLocaleString()}
+                                </td>
+                            </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* --- 第三层：号池(Key)资产与状态细化 (占右侧1/3) --- */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col">
+                <div className="px-6 py-5 border-b border-gray-100">
+                    <h2 className="text-lg font-semibold text-gray-800">号池 (Key) 状态透视</h2>
+                    <p className="text-xs text-gray-500 mt-1">排查上游封号与限流情况</p>
+                </div>
+
+                <div className="p-6 flex-1 flex flex-col justify-center gap-6">
+                    {/* 可视化分布条 (为什么这么做：直观看出死号比例，占比过高说明渠道有问题) */}
+                    <div className="space-y-2">
+                        <div className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-500">总体健康占比</span>
+                            <span className="font-medium text-gray-700">{getPercent(keyPool.active,
+                                summary.totalKeys)}%</span>
+                        </div>
+                        {/* 组合式进度条 */}
+                        <div className="h-4 w-full bg-gray-100 rounded-full overflow-hidden flex">
+                            <div style={{ width: `${getPercent(keyPool.active, summary.totalKeys)}%` }}
+                                className="bg-emerald-500 transition-all duration-500"></div>
+                            <div style={{ width: `${getPercent(keyPool.rateLimited, summary.totalKeys)}%` }}
+                                className="bg-yellow-400 transition-all duration-500"></div>
+                            <div style={{ width: `${getPercent(keyPool.exhausted, summary.totalKeys)}%` }}
+                                className="bg-gray-400 transition-all duration-500"></div>
+                            <div style={{ width: `${getPercent(keyPool.banned, summary.totalKeys)}%` }}
+                                className="bg-red-500 transition-all duration-500"></div>
+                        </div>
+                    </div>
+
+                    {/* 详细指标列表 */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                            <div className="flex items-center gap-2 text-emerald-700 mb-2">
+                                <CheckCircle2 size={16} />
+                                <span className="text-sm font-medium">健康可用</span>
+                            </div>
+                            <span className="text-2xl font-bold text-emerald-800">{keyPool.active}</span>
+                        </div>
+
+                        <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-100">
+                            <div className="flex items-center gap-2 text-yellow-700 mb-2">
+                                <Clock size={16} />
+                                <span className="text-sm font-medium">触发限流 (429)</span>
+                            </div>
+                            <span className="text-2xl font-bold text-yellow-800">{keyPool.rateLimited}</span>
+                        </div>
+
+                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                            <div className="flex items-center gap-2 text-gray-600 mb-2">
+                                <Database size={16} />
+                                <span className="text-sm font-medium">额度耗尽</span>
+                            </div>
+                            <span className="text-2xl font-bold text-gray-800">{keyPool.exhausted}</span>
+                        </div>
+
+                        <div className="p-4 bg-red-50 rounded-xl border border-red-100">
+                            <div className="flex items-center gap-2 text-red-700 mb-2">
+                                <XCircle size={16} />
+                                <span className="text-sm font-medium">被封禁 (Banned)</span>
+                            </div>
+                            <span className="text-2xl font-bold text-red-800">{keyPool.banned}</span>
+                        </div>
+                    </div>
+
+                    <div
+                        className="mt-auto pt-4 text-xs text-gray-400 bg-gray-50 -mx-6 -mb-6 p-4 rounded-b-2xl border-t border-gray-100">
+                        <p>💡 提示：如果“触发限流”激增，建议扩充该模型的号池；如果“被封禁”激增，请立刻停止使用该上游渠道提供的 API Key。</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+);
+}
