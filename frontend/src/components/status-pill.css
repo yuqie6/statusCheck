@@ -1,0 +1,31 @@
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 76px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-pill--good {
+  background: rgba(19, 168, 111, 0.14);
+  color: #68f2bc;
+}
+
+.status-pill--warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f8c266;
+}
+
+.status-pill--bad {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ff9b9b;
+}
+
+.status-pill--muted {
+  background: rgba(148, 163, 184, 0.12);
+  color: rgba(226, 232, 240, 0.8);
+}

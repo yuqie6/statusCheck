@@ -1,0 +1,31 @@
+.panel {
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(15, 21, 33, 0.95), rgba(9, 14, 22, 0.98));
+  overflow: hidden;
+}
+
+.panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.panel__title {
+  margin: 0;
+  font-size: 1rem;
+  color: #f5f8fe;
+}
+
+.panel__subtitle {
+  margin: 0.28rem 0 0;
+  font-size: 0.82rem;
+  color: rgba(214, 222, 235, 0.62);
+}
+
+.panel__body {
+  padding: 1rem 1.2rem 1.2rem;
+}
