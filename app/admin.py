@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Annotated, Any, Literal
@@ -26,6 +27,7 @@ ADMIN_ENV_KEYS = [
     "SUB2API_MONITOR_API_KEY",
     "SUB2API_MONITOR_GROUP_API_KEYS",
     "SUB2API_MONITOR_MODELS",
+    "SUB2API_MONITOR_GROUP_MODELS",
     "SUB2API_MONITOR_MODEL_SOURCES",
     "SUB2API_MONITOR_USAGE_MODEL_LIMIT",
     "SUB2API_MONITOR_TIMEOUT_SECONDS",
@@ -48,6 +50,7 @@ class AdminConfigPayload(BaseModel):
     sub2api_monitor_api_key: str = ""
     sub2api_monitor_group_api_keys: str = ""
     sub2api_monitor_models: list[str] = Field(default_factory=list)
+    sub2api_monitor_group_models: dict[int, list[str]] = Field(default_factory=dict)
     sub2api_monitor_model_sources: list[Literal["groups", "configured", "usage", "catalog"]] = Field(
         default_factory=lambda: ["groups", "configured"]
     )
@@ -113,6 +116,15 @@ def _group_keys_to_env(value: dict[int, str]) -> str:
     return ",".join(f"{group_id}={api_key}" for group_id, api_key in sorted(value.items()))
 
 
+def _group_models_to_env(value: dict[int, list[str]]) -> str:
+    cleaned = {
+        str(group_id): [model.strip() for model in models if model.strip()]
+        for group_id, models in sorted(value.items())
+    }
+    cleaned = {group_id: models for group_id, models in cleaned.items() if models}
+    return json.dumps(cleaned, ensure_ascii=False, separators=(",", ":")) if cleaned else ""
+
+
 def _normalize_group_key_text(value: str) -> str:
     parts: list[str] = []
     for raw_item in value.replace("\n", ",").split(","):
@@ -134,6 +146,7 @@ def _config_from_settings(settings: Settings) -> AdminConfigPayload:
         sub2api_monitor_api_key=settings.sub2api_monitor_api_key or "",
         sub2api_monitor_group_api_keys=_group_keys_to_env(settings.sub2api_monitor_group_api_keys),
         sub2api_monitor_models=list(settings.sub2api_monitor_models),
+        sub2api_monitor_group_models={group_id: list(models) for group_id, models in settings.sub2api_monitor_group_models.items()},
         sub2api_monitor_model_sources=list(settings.sub2api_monitor_model_sources),
         sub2api_monitor_usage_model_limit=settings.sub2api_monitor_usage_model_limit,
         sub2api_monitor_timeout_seconds=settings.sub2api_monitor_timeout_seconds,
@@ -157,6 +170,7 @@ def _env_updates_from_payload(payload: AdminConfigPayload) -> dict[str, str]:
         "SUB2API_MONITOR_API_KEY": payload.sub2api_monitor_api_key.strip(),
         "SUB2API_MONITOR_GROUP_API_KEYS": _normalize_group_key_text(payload.sub2api_monitor_group_api_keys),
         "SUB2API_MONITOR_MODELS": _join_strings(payload.sub2api_monitor_models),
+        "SUB2API_MONITOR_GROUP_MODELS": _group_models_to_env(payload.sub2api_monitor_group_models),
         "SUB2API_MONITOR_MODEL_SOURCES": _join_strings(list(payload.sub2api_monitor_model_sources)),
         "SUB2API_MONITOR_USAGE_MODEL_LIMIT": str(payload.sub2api_monitor_usage_model_limit),
         "SUB2API_MONITOR_TIMEOUT_SECONDS": str(payload.sub2api_monitor_timeout_seconds),

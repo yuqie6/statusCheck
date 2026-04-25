@@ -402,6 +402,7 @@ class DashboardService:
             section["monitored_models"] = self._resolve_monitored_models(
                 snapshot=snapshot,
                 groups=[section["group"]],
+                group_id=section["group_id"],
                 catalog_items=catalog_items,
             )
 
@@ -817,13 +818,17 @@ class DashboardService:
         *,
         snapshot: dict[str, Any],
         groups: list[dict[str, Any]],
+        group_id: int,
         catalog_items: list[dict[str, Any]],
     ) -> set[str]:
         sources = set(self.settings.sub2api_monitor_model_sources)
         models: set[str] = set()
 
         if "configured" in sources:
-            models.update(self.settings.sub2api_monitor_models)
+            if group_id in self.settings.sub2api_monitor_group_models:
+                models.update(self.settings.sub2api_monitor_group_models[group_id])
+            else:
+                models.update(self.settings.sub2api_monitor_models)
         if "groups" in sources:
             models.update(self._extract_models_from_groups(groups))
         if "usage" in sources:

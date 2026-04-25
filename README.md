@@ -206,6 +206,7 @@ ADMIN_TOKEN=your-admin-token
 - `SUB2API_MONITOR_API_KEY`
 - `SUB2API_MONITOR_GROUP_API_KEYS`
 - `SUB2API_MONITOR_MODELS`
+- `SUB2API_MONITOR_GROUP_MODELS`
 - `SUB2API_MONITOR_MODEL_SOURCES`
 - `SUB2API_MONITOR_*` 探针超时、并发、prompt、endpoint 等配置
 
@@ -226,6 +227,7 @@ Docker Compose 模式会把宿主机 `.env` 挂载到容器 `/app/.env`，admin 
 SUB2API_MONITOR_API_KEY=一个普通可调用 /v1/models 和 /v1/chat/completions 的 key
 SUB2API_MONITOR_GROUP_API_KEYS=
 SUB2API_MONITOR_MODELS=gpt-5.4,gpt-5.4-mini,claude-sonnet-4-6
+SUB2API_MONITOR_GROUP_MODELS=
 SUB2API_MONITOR_MODEL_SOURCES=groups,configured
 ```
 
@@ -262,6 +264,30 @@ SUB2API_MONITOR_MODEL_SOURCES=groups,configured
 ```
 
 也就是说，**现在分组探针会自动从 group 配置派生，不再只是拿 snapshot 前几名模型硬探。**
+
+### 按分组单独配置探针模型
+
+如果不同分组需要探测不同模型，可以配置 `SUB2API_MONITOR_GROUP_MODELS`。它只影响 `SUB2API_MONITOR_MODEL_SOURCES` 里启用了 `configured` 的“手动列表”来源。
+
+规则是：
+
+- 某个分组配置了自己的模型列表：该分组使用自己的手动模型列表。
+- 某个分组没有配置：继续使用全局 `SUB2API_MONITOR_MODELS`。
+- `groups` / `usage` / `catalog` 来源仍按原配置追加候选模型。
+
+推荐使用 JSON，适合写入 `.env` 或通过 `/admin` 页面保存：
+
+```env
+SUB2API_MONITOR_GROUP_MODELS={"2":["gpt-5.4","gpt-5.4-mini"],"6":["gpt-5.3-codex","gpt-5.2"]}
+```
+
+也支持简写格式：
+
+```env
+SUB2API_MONITOR_GROUP_MODELS=2=gpt-5.4|gpt-5.4-mini;6=gpt-5.3-codex|gpt-5.2
+```
+
+隐藏 admin 页面会按当前监控分组展示“按分组覆盖手动模型”，留空表示沿用全局手动模型列表。
 
 ### 一个 probe key 只能监控一个分组时怎么配
 

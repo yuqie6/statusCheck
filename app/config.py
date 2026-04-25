@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     sub2api_monitor_api_key: str | None = None
     sub2api_monitor_group_api_keys: Annotated[dict[int, str], NoDecode] = Field(default_factory=dict)
     sub2api_monitor_models: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    sub2api_monitor_group_models: Annotated[dict[int, list[str]], NoDecode] = Field(default_factory=dict)
     sub2api_monitor_model_sources: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["groups", "configured"]
     )
@@ -87,6 +88,43 @@ class Settings(BaseSettings):
         if isinstance(value, list):
             return [item.strip() for item in value if item and item.strip()]
         return [item.strip() for item in value.split(",") if item.strip()]
+
+
+    @field_validator("sub2api_monitor_group_models", mode="before")
+    @classmethod
+    def split_monitor_group_models(
+        cls, value: str | dict[int, list[str]] | dict[str, list[str] | str] | None
+    ) -> dict[int, list[str]]:
+        if value is None:
+            return {}
+        if isinstance(value, dict):
+            result: dict[int, list[str]] = {}
+            for group_id, models in value.items():
+                if isinstance(models, str):
+                    items = [item.strip() for item in models.replace("\n", ",").replace("|", ",").split(",") if item.strip()]
+                else:
+                    items = [str(item).strip() for item in models if str(item).strip()]
+                result[int(group_id)] = items
+            return result
+
+        text = value.strip()
+        if not text:
+            return {}
+
+        if text.startswith("{"):
+            parsed = json.loads(text)
+            if not isinstance(parsed, dict):
+                raise ValueError("SUB2API_MONITOR_GROUP_MODELS 的 JSON 必须是对象映射")
+            return cls.split_monitor_group_models(parsed)
+
+        result: dict[int, list[str]] = {}
+        for item in [part.strip() for part in text.replace("\n", ";").split(";") if part.strip()]:
+            if "=" not in item:
+                raise ValueError("SUB2API_MONITOR_GROUP_MODELS 格式应为 `2=modelA|modelB;6=modelC` 或 JSON 对象")
+            group_text, models_text = item.split("=", 1)
+            models = [model.strip() for model in models_text.replace("|", ",").split(",") if model.strip()]
+            result[int(group_text.strip())] = models
+        return result
 
     @field_validator("sub2api_monitor_group_api_keys", mode="before")
     @classmethod

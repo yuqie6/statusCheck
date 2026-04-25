@@ -188,6 +188,7 @@ export interface AdminConfig {
   sub2api_monitor_api_key: string
   sub2api_monitor_group_api_keys: string
   sub2api_monitor_models: string[]
+  sub2api_monitor_group_models: Record<string, string[]>
   sub2api_monitor_model_sources: AdminModelSource[]
   sub2api_monitor_usage_model_limit: number
   sub2api_monitor_timeout_seconds: number
