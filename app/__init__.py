@@ -1,0 +1,1 @@
+"""Status check application package."""
