@@ -124,6 +124,49 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 38481
 
 - `http://127.0.0.1:38481`
 
+## Docker Compose 一键启动
+
+先准备运行时配置：
+
+```bash
+cp .env.example .env
+```
+
+至少填写管理员 Key：
+
+```env
+SUB2API_ADMIN_API_KEY=your-admin-api-key
+```
+
+如果 Sub2API 跑在宿主机 `18081` 端口，Docker Compose 默认会通过下面这个地址从容器访问宿主机服务：
+
+```env
+DOCKER_SUB2API_BASE_URL=http://host.docker.internal:18081
+```
+
+启动：
+
+```bash
+docker compose up -d
+```
+
+查看状态和日志：
+
+```bash
+docker compose ps
+docker compose logs -f statuscheck
+```
+
+默认访问：
+
+- `http://127.0.0.1:38481`
+
+如果要改宿主机暴露端口，只改 `.env`：
+
+```env
+STATUSCHECK_PORT=38481
+```
+
 ## 真实模型探针说明
 
 默认情况下，这个项目**只接 admin 统计**，已经能看到：

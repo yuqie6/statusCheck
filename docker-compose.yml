@@ -1,0 +1,28 @@
+services:
+  statuscheck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: statuscheck:local
+    container_name: statuscheck
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      HOST: 0.0.0.0
+      PORT: 38481
+      APP_ENV: production
+      SUB2API_BASE_URL: ${DOCKER_SUB2API_BASE_URL:-http://host.docker.internal:18081}
+    ports:
+      - "${STATUSCHECK_PORT:-38481}:38481"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:38481/api/healthz', timeout=5).read()"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
