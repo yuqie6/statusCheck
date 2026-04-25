@@ -13,6 +13,14 @@
   - 历史高消耗模型分布
   - 可选的 **真实模型探针**（需要额外 public API key）
 
+## 在线预览
+
+当前公网参考站点：<https://status.devbin.de/>
+
+> 参考站点只暴露只读状态页和 token 保护的隐藏 `/admin` 页面；真实密钥通过部署环境变量注入，不提交到仓库。
+
+![statusCheck 深色模式预览](docs/statuscheck-preview.png)
+
 ## 目录结构
 
 ```text
@@ -181,6 +189,26 @@ STATUSCHECK_PORT=38481
 - 页面不再单独保留一个“账号池大杂烩”模块，避免看不到单个分组真实情况。
 
 如果需要改变展示哪些分组，直接进入隐藏 admin 页面修改 `SUB2API_GROUP_IDS`。
+
+## 安全性说明
+
+这个项目适合公开展示只读状态页，但需要注意公开数据边界：
+
+- `/api/dashboard` 是公开只读接口，会返回分组名、账号数量、可用率、成本、延迟、模型探针状态等运行指标。
+- `/admin` 页面没有主站入口，但 URL 本身不是安全边界；真正的保护来自后端 `ADMIN_TOKEN`。
+- `/api/admin/*` 必须携带 `Authorization: Bearer <ADMIN_TOKEN>`，未授权会返回 `401`。
+- `.env`、`frontend/.env` 等真实配置已被 `.gitignore` 排除，仓库只保留 `.env.example`。
+- Docker Compose 会把宿主机 `.env` 挂载到容器 `/app/.env`，admin 保存配置时会写回这份文件；不要把真实 `.env` 提交到 GitHub。
+- 后端响应会附加基础安全响应头：
+  - `Content-Security-Policy`
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: no-referrer`
+  - `Permissions-Policy`
+  - `Cross-Origin-Opener-Policy`
+- `/api/*` 响应默认带 `Cache-Control: no-store`，避免中间层缓存带状态的 API 响应。
+
+如果你不想公开真实账号规模、成本或分组名，建议后续增加 `PUBLIC_DEMO_MODE` / `DASHBOARD_REDACT_PUBLIC_FIELDS` 之类的脱敏开关，再把公网参考站点切到脱敏模式。
 
 ## 隐藏 Admin 配置页
 
