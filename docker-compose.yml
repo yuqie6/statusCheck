@@ -12,9 +12,12 @@ services:
       HOST: 0.0.0.0
       PORT: 38481
       APP_ENV: production
+      STATUSCHECK_ENV_FILE: /app/.env
       SUB2API_BASE_URL: ${DOCKER_SUB2API_BASE_URL:-http://host.docker.internal:18081}
     ports:
       - "${STATUSCHECK_PORT:-38481}:38481"
+    volumes:
+      - ./.env:/app/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

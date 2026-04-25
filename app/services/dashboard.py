@@ -100,8 +100,8 @@ class DashboardService:
             return snapshot
 
     async def run_refresh_loop(self, stop_event: asyncio.Event) -> None:
-        interval = max(self.settings.dashboard_cache_ttl_seconds, 5)
         while not stop_event.is_set():
+            interval = max(self.settings.dashboard_cache_ttl_seconds, 5)
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=interval)
                 break

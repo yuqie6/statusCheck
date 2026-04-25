@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     allowed_origins: Annotated[list[str], NoDecode] = Field(
         default_factory=lambda: ["http://127.0.0.1:38482", "http://localhost:38482"]
     )
+    admin_token: str = ""
 
     sub2api_base_url: str = "http://127.0.0.1:18081"
     sub2api_admin_api_key: str = ""
@@ -118,7 +119,7 @@ class Settings(BaseSettings):
             }
 
         result: dict[int, str] = {}
-        for item in [part.strip() for part in text.split(",") if part.strip()]:
+        for item in [part.strip() for part in text.replace("\n", ",").split(",") if part.strip()]:
             if "=" not in item:
                 raise ValueError(
                     "SUB2API_MONITOR_GROUP_API_KEYS 格式应为 `2=keyA,6=keyB` 或 JSON 对象"

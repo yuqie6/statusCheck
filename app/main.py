@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.admin import router as admin_router
 from app.clients.sub2api import Sub2ApiClient
 from app.config import Settings, get_settings
 from app.services.dashboard import DashboardService, utc_now_iso
@@ -49,6 +50,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Sub2API Status Check", version="0.1.0", lifespan=lifespan)
 settings = get_settings()
+app.include_router(admin_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,

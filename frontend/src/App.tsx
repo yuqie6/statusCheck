@@ -361,7 +361,6 @@ export default function App() {
   }
 
   const { summary, pool, sources } = dashboard
-  const availabilityRatio = ratio(summary.available_accounts, summary.total_accounts)
   const scopedGroups = dashboard.config.group_scope.group_names.map((name, index) => ({
     id: dashboard.config.group_scope.group_ids[index] ?? index,
     name,
@@ -377,7 +376,7 @@ export default function App() {
   })
   const abnormalCount = modelState.degraded + modelState.down
   const scopeLabel = scopedGroups.length > 0 ? scopedGroups.map((item) => item.name).join(' / ') : '未设置'
-  const groupsView = pool.groups.slice(0, 6)
+  const groupsView = pool.groups
 
   return (
     <main className="status-page">
@@ -626,36 +625,42 @@ export default function App() {
             <section className="panel fade-up">
               <div className="panel__head panel__head--stacked">
                 <div>
-                  <span className="panel__eyebrow">账号池状态</span>
-                  <h2>账号池</h2>
+                  <span className="panel__eyebrow">分组账号池</span>
+                  <h2>各分组账号情况</h2>
                 </div>
+                <p>不再只看汇总池，按分组拆开可用、限流、异常与并发。</p>
               </div>
-              <div className="pool-overview">
-                <div className="pool-overview__value">{formatPercent(availabilityRatio)}</div>
-                <p>可用率</p>
-              </div>
-              <div className="pool-bar">
-                <div className="pool-bar__segment is-active" style={{ width: `${percentWidth(summary.available_accounts, summary.total_accounts)}%` }} />
-                <div className="pool-bar__segment is-limited" style={{ width: `${percentWidth(summary.rate_limited_accounts, summary.total_accounts)}%` }} />
-                <div className="pool-bar__segment is-error" style={{ width: `${percentWidth(summary.error_accounts, summary.total_accounts)}%` }} />
-              </div>
-              <div className="pool-grid">
-                <div className="pool-grid__item">
-                  <span>可用</span>
-                  <strong>{formatNumber(summary.available_accounts)}</strong>
-                </div>
-                <div className="pool-grid__item">
-                  <span>限流</span>
-                  <strong>{formatNumber(summary.rate_limited_accounts)}</strong>
-                </div>
-                <div className="pool-grid__item">
-                  <span>异常</span>
-                  <strong>{formatNumber(summary.error_accounts)}</strong>
-                </div>
-                <div className="pool-grid__item">
-                  <span>活跃 Key</span>
-                  <strong>{formatNumber(summary.active_api_keys)}</strong>
-                </div>
+              <div className="group-pool-list">
+                {groupsView.length > 0 ? groupsView.map((group) => {
+                  const tone = groupTone(group.status)
+                  const otherCount = Math.max(
+                    group.account_count - group.available_count - group.rate_limited_count - group.error_count,
+                    0,
+                  )
+                  return (
+                    <article key={group.id} className="group-pool-card">
+                      <div className="group-pool-card__top">
+                        <div>
+                          <h3>{group.name}</h3>
+                          <p>{group.platform} · 默认模型 {group.default_model}</p>
+                        </div>
+                        <span className={`group-badge is-${tone}`}>{formatPercent(groupAvailability(group), 0)}</span>
+                      </div>
+                      <div className="group-pool-bar" aria-label={`${group.name} 账号池分布`}>
+                        <div className="group-pool-bar__segment is-active" style={{ width: `${percentWidth(group.available_count, group.account_count)}%` }} />
+                        <div className="group-pool-bar__segment is-limited" style={{ width: `${percentWidth(group.rate_limited_count, group.account_count)}%` }} />
+                        <div className="group-pool-bar__segment is-error" style={{ width: `${percentWidth(group.error_count, group.account_count)}%` }} />
+                        <div className="group-pool-bar__segment is-other" style={{ width: `${percentWidth(otherCount, group.account_count)}%` }} />
+                      </div>
+                      <div className="group-pool-card__stats">
+                        <span><b>{formatNumber(group.available_count)}</b> 可用</span>
+                        <span><b>{formatNumber(group.rate_limited_count)}</b> 限流</span>
+                        <span><b>{formatNumber(group.error_count)}</b> 异常</span>
+                        <span><b>{formatNumber(group.concurrency_used)}/{formatNumber(group.concurrency_max)}</b> 并发</span>
+                      </div>
+                    </article>
+                  )
+                }) : <div className="model-group-empty">暂无分组账号池数据</div>}
               </div>
             </section>
 
@@ -681,40 +686,6 @@ export default function App() {
           </aside>
         </section>
 
-        {groupsView.length > 0 ? (
-          <section className="panel fade-up">
-            <div className="panel__head">
-              <div>
-                <span className="panel__eyebrow">分组状态</span>
-                <h2>监控分组</h2>
-              </div>
-              <p>{groupsView.length} 个分组</p>
-            </div>
-            <div className="group-list">
-              {groupsView.map((group) => {
-                const tone = groupTone(group.status)
-                return (
-                  <article key={group.id} className="group-card">
-                    <div className="group-card__top">
-                      <div>
-                        <h3>{group.name}</h3>
-                        <p>
-                          {group.platform} · 默认模型 {group.default_model}
-                        </p>
-                      </div>
-                      <span className={`group-badge is-${tone}`}>{group.status}</span>
-                    </div>
-                    <div className="group-card__meta">
-                      <span>可用 {formatNumber(group.available_count)} / {formatNumber(group.account_count)}</span>
-                      <span>可用率 {formatPercent(groupAvailability(group))}</span>
-                      <span>并发 {formatNumber(group.concurrency_used)} / {formatNumber(group.concurrency_max)}</span>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-          </section>
-        ) : null}
       </div>
     </main>
   )

@@ -6,7 +6,7 @@
 - 用 **React + Vite** 做前端展示
 - admin 侧按 Sub2API 的 **`x-api-key`** 鉴权方式调用
 - 支持展示：
-  - 号池总量 / 可用量 / 限流量 / 异常量
+  - 按分组展示账号池可用 / 限流 / 异常 / 并发，避免只看总池大盘
   - 分组容量、并发占用、今日 / 累计成本
   - admin dashboard / ops overview / realtime 的关键运行指标
   - 近 7 天请求与成本趋势
@@ -167,6 +167,50 @@ docker compose logs -f statuscheck
 STATUSCHECK_PORT=38481
 ```
 
+
+## 前端展示口径
+
+主状态页默认只提供观测能力，不会主动修改 Sub2API 状态。当前展示口径是：
+
+- 顶部指标展示整体探针与运行快照。
+- 模型健康区按分组拆成独立卡片，每个分组之间有独立边框、间距和标题，避免多组模型混在同一张表里。
+- 右侧“各分组账号情况”把原来的账号池总览和分组栏合并：
+  - 每个分组单独显示账号总量、可用数、限流数、异常数。
+  - 每个分组单独显示可用率和账号状态分布条。
+  - 每个分组单独显示当前并发 / 最大并发。
+- 页面不再单独保留一个“账号池大杂烩”模块，避免看不到单个分组真实情况。
+
+如果需要改变展示哪些分组，直接进入隐藏 admin 页面修改 `SUB2API_GROUP_IDS`。
+
+## 隐藏 Admin 配置页
+
+项目提供一个隐藏配置页：
+
+- 访问路径：`/admin`
+- 主状态页没有入口链接，需要手动输入路径
+- 后端通过环境变量 `ADMIN_TOKEN` 鉴权
+- 前端登录后会用 `Authorization: Bearer <ADMIN_TOKEN>` 调用 admin API
+
+最少配置：
+
+```env
+ADMIN_TOKEN=your-admin-token
+```
+
+当前 admin 页支持在线修改并立即刷新：
+
+- `SUB2API_GROUP_IDS`
+- `SUB2API_INCLUDE_EXCLUSIVE_GROUPS`
+- `DASHBOARD_CACHE_TTL_SECONDS`
+- `ACCOUNT_SCAN_*` 慢速扫描配置
+- `SUB2API_MONITOR_API_KEY`
+- `SUB2API_MONITOR_GROUP_API_KEYS`
+- `SUB2API_MONITOR_MODELS`
+- `SUB2API_MONITOR_MODEL_SOURCES`
+- `SUB2API_MONITOR_*` 探针超时、并发、prompt、endpoint 等配置
+
+Docker Compose 模式会把宿主机 `.env` 挂载到容器 `/app/.env`，admin 保存时会同步写回这份文件；同时也会更新当前进程内存配置并触发一次 dashboard 刷新，不需要手动重启。
+
 ## 真实模型探针说明
 
 默认情况下，这个项目**只接 admin 统计**，已经能看到：
@@ -227,10 +271,13 @@ SUB2API_MONITOR_MODEL_SOURCES=groups,configured
 SUB2API_MONITOR_GROUP_API_KEYS=2=group2_probe_key,6=group6_probe_key
 ```
 
-支持两种格式：
+支持三种格式：
 
 - 逗号分隔：
   - `2=keyA,6=keyB`
+- 换行分隔：
+  - `2=keyA`
+  - `6=keyB`
 - JSON：
   - `{"2":"keyA","6":"keyB"}`
 

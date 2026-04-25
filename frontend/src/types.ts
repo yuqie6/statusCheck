@@ -173,3 +173,44 @@ export interface DashboardResponse {
     }
   }
 }
+
+
+export type AdminModelSource = 'groups' | 'configured' | 'usage' | 'catalog'
+
+export interface AdminConfig {
+  sub2api_group_ids: number[]
+  sub2api_include_exclusive_groups: boolean
+  dashboard_cache_ttl_seconds: number
+  account_scan_enabled: boolean
+  account_scan_ttl_seconds: number
+  account_scan_page_size: number
+  account_scan_max_pages: number
+  sub2api_monitor_api_key: string
+  sub2api_monitor_group_api_keys: string
+  sub2api_monitor_models: string[]
+  sub2api_monitor_model_sources: AdminModelSource[]
+  sub2api_monitor_usage_model_limit: number
+  sub2api_monitor_timeout_seconds: number
+  sub2api_monitor_max_tokens: number
+  sub2api_monitor_temperature: number
+  sub2api_monitor_prompt: string
+  sub2api_monitor_concurrency: number
+  sub2api_monitor_probe_endpoint: 'chat_completions' | 'responses'
+}
+
+export interface AdminGroup {
+  id: number
+  name: string
+  platform: string
+  status: string
+  is_exclusive: boolean
+  account_count: number
+  default_model: string
+}
+
+export interface AdminConfigResponse {
+  config: AdminConfig
+  available_groups: AdminGroup[]
+  env_file: string
+  generated_at: string
+}
