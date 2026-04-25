@@ -157,6 +157,67 @@ class DashboardService:
             availability_latency_ms=availability_latency_ms,
             group_scope=group_scope,
         )
+        return self._sanitize_public_dashboard(data)
+
+
+    def _sanitize_public_dashboard(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Remove operational/private fields unless explicitly enabled."""
+        allowed = set(self.settings.public_dashboard_fields)
+        summary = data.get("summary") or {}
+
+        def remove_summary(*keys: str) -> None:
+            for key in keys:
+                summary.pop(key, None)
+
+        if "api_keys" not in allowed:
+            remove_summary("total_api_keys", "active_api_keys")
+        if "users" not in allowed:
+            remove_summary("active_users")
+        if "request_volume" not in allowed:
+            remove_summary("today_requests", "rpm", "qps")
+        if "token_volume" not in allowed:
+            remove_summary("tpm", "tps")
+        if "costs" not in allowed:
+            remove_summary("today_cost", "total_cost")
+        if "quota" not in allowed:
+            data.pop("quota_estimate", None)
+
+        if "request_volume" not in allowed and "token_volume" not in allowed and "costs" not in allowed:
+            data.pop("timeseries", None)
+        else:
+            for item in ((data.get("timeseries") or {}).get("daily") or []):
+                if "request_volume" not in allowed:
+                    item.pop("requests", None)
+                if "token_volume" not in allowed:
+                    item.pop("tokens", None)
+                if "costs" not in allowed:
+                    item.pop("cost", None)
+
+        for row in data.get("models") or []:
+            if "model_usage" not in allowed and "request_volume" not in allowed:
+                row.pop("requests_7d", None)
+            if "model_usage" not in allowed and "costs" not in allowed:
+                row.pop("cost_7d", None)
+            if "model_usage" not in allowed and "token_volume" not in allowed:
+                row.pop("tokens_7d", None)
+        for section in data.get("model_groups") or []:
+            for row in section.get("models") or []:
+                if "model_usage" not in allowed and "request_volume" not in allowed:
+                    row.pop("requests_7d", None)
+                if "model_usage" not in allowed and "costs" not in allowed:
+                    row.pop("cost_7d", None)
+                if "model_usage" not in allowed and "token_volume" not in allowed:
+                    row.pop("tokens_7d", None)
+
+        for group in ((data.get("pool") or {}).get("groups") or []):
+            if "costs" not in allowed:
+                group.pop("today_cost", None)
+                group.pop("total_cost", None)
+
+        overview = ((data.get("ops") or {}).get("overview") or {})
+        if "ops_counts" not in allowed:
+            for key in ("success_count", "error_count_total", "request_count_total", "upstream_error_count_excl_429_529"):
+                overview.pop(key, None)
         return data
 
     def _scope_groups(self, groups_payload: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -624,6 +685,8 @@ class DashboardService:
                 "group_scope": group_scope,
                 "probe_groups": probe_meta.get("configured_groups", []),
                 "probe_missing_groups": probe_meta.get("missing_groups", []),
+                "public_dashboard_fields": self.settings.public_dashboard_fields,
+                "public_dashboard_cards": self.settings.public_dashboard_cards,
             },
             "summary": {
                 "total_accounts": total_accounts,

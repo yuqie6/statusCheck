@@ -36,6 +36,8 @@ ADMIN_ENV_KEYS = [
     "SUB2API_MONITOR_PROMPT",
     "SUB2API_MONITOR_CONCURRENCY",
     "SUB2API_MONITOR_PROBE_ENDPOINT",
+    "PUBLIC_DASHBOARD_FIELDS",
+    "PUBLIC_DASHBOARD_CARDS",
 ]
 
 
@@ -61,6 +63,31 @@ class AdminConfigPayload(BaseModel):
     sub2api_monitor_prompt: str = Field("Reply with OK only.", min_length=1, max_length=2000)
     sub2api_monitor_concurrency: int = Field(3, ge=1, le=50)
     sub2api_monitor_probe_endpoint: Literal["chat_completions", "responses"] = "chat_completions"
+    public_dashboard_fields: list[
+        Literal[
+            "costs",
+            "request_volume",
+            "token_volume",
+            "api_keys",
+            "users",
+            "quota",
+            "model_usage",
+            "ops_counts",
+        ]
+    ] = Field(default_factory=list)
+    public_dashboard_cards: list[
+        Literal[
+            "metric_monitor_items",
+            "metric_healthy_models",
+            "metric_abnormal_models",
+            "metric_probe_groups",
+            "model_groups",
+            "snapshot",
+            "scope",
+            "group_pool",
+            "insights",
+        ]
+    ] = Field(default_factory=list)
 
 
 class AdminConfigResponse(BaseModel):
@@ -155,6 +182,8 @@ def _config_from_settings(settings: Settings) -> AdminConfigPayload:
         sub2api_monitor_prompt=settings.sub2api_monitor_prompt,
         sub2api_monitor_concurrency=settings.sub2api_monitor_concurrency,
         sub2api_monitor_probe_endpoint=settings.sub2api_monitor_probe_endpoint,
+        public_dashboard_fields=list(settings.public_dashboard_fields),
+        public_dashboard_cards=list(settings.public_dashboard_cards),
     )
 
 
@@ -179,6 +208,8 @@ def _env_updates_from_payload(payload: AdminConfigPayload) -> dict[str, str]:
         "SUB2API_MONITOR_PROMPT": payload.sub2api_monitor_prompt.replace("\n", " ").strip(),
         "SUB2API_MONITOR_CONCURRENCY": str(payload.sub2api_monitor_concurrency),
         "SUB2API_MONITOR_PROBE_ENDPOINT": payload.sub2api_monitor_probe_endpoint,
+        "PUBLIC_DASHBOARD_FIELDS": _join_strings(list(payload.public_dashboard_fields)),
+        "PUBLIC_DASHBOARD_CARDS": _join_strings(list(payload.public_dashboard_cards)),
     }
 
 

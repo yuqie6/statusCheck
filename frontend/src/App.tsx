@@ -377,6 +377,17 @@ export default function App() {
   })
   const abnormalCount = modelState.degraded + modelState.down
   const scopeLabel = scopedGroups.length > 0 ? scopedGroups.map((item) => item.name).join(' / ') : '未设置'
+  const visibleCards = new Set(dashboard.config.public_dashboard_cards ?? [])
+  const showMetricMonitorItems = visibleCards.has('metric_monitor_items')
+  const showMetricHealthyModels = visibleCards.has('metric_healthy_models')
+  const showMetricAbnormalModels = visibleCards.has('metric_abnormal_models')
+  const showMetricProbeGroups = visibleCards.has('metric_probe_groups')
+  const showModelGroups = visibleCards.has('model_groups')
+  const showSnapshot = visibleCards.has('snapshot')
+  const showScope = visibleCards.has('scope')
+  const showGroupPool = visibleCards.has('group_pool')
+  const showInsights = visibleCards.has('insights')
+  const showSidebar = showSnapshot || showScope || showGroupPool || showInsights
   const groupsView = pool.groups
 
   return (
@@ -428,6 +439,7 @@ export default function App() {
         {error ? <div className="warning-banner fade-up">最近一次刷新失败：{error}</div> : null}
 
         <section className="metric-grid">
+          {showMetricMonitorItems ? (
           <MetricCard
             title="监控项"
             value={formatNumber(modelState.total)}
@@ -435,6 +447,8 @@ export default function App() {
             icon={Layers3}
             tone="neutral"
           />
+          ) : null}
+          {showMetricHealthyModels ? (
           <MetricCard
             title="探针正常"
             value={formatNumber(modelState.healthy)}
@@ -442,6 +456,8 @@ export default function App() {
             icon={CheckCircle2}
             tone="good"
           />
+          ) : null}
+          {showMetricAbnormalModels ? (
           <MetricCard
             title="异常模型"
             value={formatNumber(abnormalCount)}
@@ -449,6 +465,8 @@ export default function App() {
             icon={ShieldAlert}
             tone={abnormalCount > 0 ? 'critical' : 'neutral'}
           />
+          ) : null}
+          {showMetricProbeGroups ? (
           <MetricCard
             title="探针分组"
             value={`${dashboard.config.probe_groups.length}/${dashboard.config.group_scope.group_ids.length}`}
@@ -460,9 +478,11 @@ export default function App() {
             icon={KeyRound}
             tone={dashboard.config.probe_missing_groups.length > 0 ? 'warn' : 'good'}
           />
+          ) : null}
         </section>
 
         <section className="status-layout">
+          {showModelGroups ? (
           <article className="panel panel--main fade-up">
             <div className="panel__head">
               <div>
@@ -566,8 +586,11 @@ export default function App() {
               })}
             </div>
           </article>
+          ) : null}
 
+          {showSidebar ? (
           <aside className="sidebar-stack">
+            {showSnapshot ? (
             <section className="panel fade-up">
               <div className="panel__head panel__head--stacked">
                 <div>
@@ -594,7 +617,9 @@ export default function App() {
                 </div>
               </div>
             </section>
+            ) : null}
 
+            {showScope ? (
             <section className="panel fade-up">
               <div className="panel__head panel__head--stacked">
                 <div>
@@ -623,7 +648,9 @@ export default function App() {
                 </p>
               </div>
             </section>
+            ) : null}
 
+            {showGroupPool ? (
             <section className="panel fade-up">
               <div className="panel__head panel__head--stacked">
                 <div>
@@ -665,7 +692,9 @@ export default function App() {
                 }) : <div className="model-group-empty">暂无分组账号池数据</div>}
               </div>
             </section>
+            ) : null}
 
+            {showInsights ? (
             <section className="panel fade-up">
               <div className="panel__head panel__head--stacked">
                 <div>
@@ -685,7 +714,9 @@ export default function App() {
                 ))}
               </div>
             </section>
+            ) : null}
           </aside>
+          ) : null}
         </section>
 
       </div>

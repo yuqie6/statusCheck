@@ -52,6 +52,21 @@ class Settings(BaseSettings):
     sub2api_monitor_concurrency: int = 3
     sub2api_monitor_probe_endpoint: Literal["chat_completions", "responses"] = "chat_completions"
 
+    public_dashboard_fields: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    public_dashboard_cards: Annotated[list[str], NoDecode] = Field(
+        default_factory=lambda: [
+            "metric_monitor_items",
+            "metric_healthy_models",
+            "metric_abnormal_models",
+            "metric_probe_groups",
+            "model_groups",
+            "snapshot",
+            "scope",
+            "group_pool",
+            "insights",
+        ]
+    )
+
     @field_validator("sub2api_base_url")
     @classmethod
     def strip_trailing_slash(cls, value: str) -> str:
@@ -168,6 +183,47 @@ class Settings(BaseSettings):
             if key_text:
                 result[group_id] = key_text
         return result
+
+    @field_validator("public_dashboard_fields", mode="before")
+    @classmethod
+    def split_public_dashboard_fields(cls, value: str | list[str] | None) -> list[str]:
+        if value is None:
+            return []
+        if isinstance(value, list):
+            items = [item.strip().lower() for item in value if item and item.strip()]
+        else:
+            items = [item.strip().lower() for item in value.replace("\n", ",").split(",") if item.strip()]
+        allowed = {"costs", "request_volume", "token_volume", "api_keys", "users", "quota", "model_usage", "ops_counts"}
+        invalid = [item for item in items if item not in allowed]
+        if invalid:
+            raise ValueError(f"PUBLIC_DASHBOARD_FIELDS 包含不支持的值: {', '.join(sorted(invalid))}")
+        return items
+
+    @field_validator("public_dashboard_cards", mode="before")
+    @classmethod
+    def split_public_dashboard_cards(cls, value: str | list[str] | None) -> list[str]:
+        default = [
+            "metric_monitor_items",
+            "metric_healthy_models",
+            "metric_abnormal_models",
+            "metric_probe_groups",
+            "model_groups",
+            "snapshot",
+            "scope",
+            "group_pool",
+            "insights",
+        ]
+        if value is None:
+            return default
+        if isinstance(value, list):
+            items = [item.strip().lower() for item in value if item and item.strip()]
+        else:
+            items = [item.strip().lower() for item in value.replace("\n", ",").split(",") if item.strip()]
+        allowed = set(default)
+        invalid = [item for item in items if item not in allowed]
+        if invalid:
+            raise ValueError(f"PUBLIC_DASHBOARD_CARDS 包含不支持的值: {', '.join(sorted(invalid))}")
+        return items or default
 
     @field_validator("sub2api_monitor_model_sources", mode="before")
     @classmethod

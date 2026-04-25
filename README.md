@@ -17,7 +17,7 @@
 
 当前公网参考站点：<https://status.devbin.de/>
 
-> 参考站点只暴露只读状态页和 token 保护的隐藏 `/admin` 页面；真实密钥通过部署环境变量注入，不提交到仓库。
+> 参考站点只暴露只读状态页和 token 保护的隐藏 `/admin` 页面；真实密钥、成本、请求量、token 量、用户数和 API key 数不会出现在公开接口字段里。
 
 ![statusCheck 深色模式预览](docs/statuscheck-preview.png)
 
@@ -194,7 +194,7 @@ STATUSCHECK_PORT=38481
 
 这个项目适合公开展示只读状态页，但需要注意公开数据边界：
 
-- `/api/dashboard` 是公开只读接口，会返回分组名、账号数量、可用率、成本、延迟、模型探针状态等运行指标。
+- `/api/dashboard` 是公开只读接口，只保留分组名、账号数量、可用率、容量、延迟和模型探针状态等展示所需字段。
 - `/admin` 页面没有主站入口，但 URL 本身不是安全边界；真正的保护来自后端 `ADMIN_TOKEN`。
 - `/api/admin/*` 必须携带 `Authorization: Bearer <ADMIN_TOKEN>`，未授权会返回 `401`。
 - `.env`、`frontend/.env` 等真实配置已被 `.gitignore` 排除，仓库只保留 `.env.example`。
@@ -206,9 +206,30 @@ STATUSCHECK_PORT=38481
   - `Referrer-Policy: no-referrer`
   - `Permissions-Policy`
   - `Cross-Origin-Opener-Policy`
+- `/api/dashboard` 默认移除请求量、token 量、成本、quota、API key 数、用户数和底层成功/失败请求计数，避免把运营隐私暴露在公开 JSON 字段里。
+- 如确实需要公开某类字段，可在 `/admin` 的“公开展示”里显式勾选；对应环境变量是 `PUBLIC_DASHBOARD_FIELDS`。
+- 首页顶部指标、模型表、快照、监控范围、分组账号池和告警卡片也可在 `/admin` 的“公开展示”里控制；对应环境变量是 `PUBLIC_DASHBOARD_CARDS`。
 - `/api/*` 响应默认带 `Cache-Control: no-store`，避免中间层缓存带状态的 API 响应。
 
-如果你不想公开真实账号规模、成本或分组名，建议后续增加 `PUBLIC_DEMO_MODE` / `DASHBOARD_REDACT_PUBLIC_FIELDS` 之类的脱敏开关，再把公网参考站点切到脱敏模式。
+### 公开展示字段与卡片
+
+默认公开账号数量、可用率、分组容量、延迟和模型探针结果；以下敏感字段默认不出现在 `/api/dashboard`，只能在 admin 页面显式开启：
+
+- `costs`：成本相关字段
+- `request_volume`：请求量、RPM、QPS 和趋势请求数
+- `token_volume`：TPM、TPS、token 趋势和模型 token 量
+- `api_keys`：API key 数量
+- `users`：活跃用户数
+- `quota`：额度估算
+- `model_usage`：模型 7 日用量字段
+- `ops_counts`：底层成功 / 失败 / 总请求计数
+
+首页卡片也可配置：
+
+```env
+PUBLIC_DASHBOARD_CARDS=metric_monitor_items,metric_healthy_models,metric_abnormal_models,metric_probe_groups,model_groups,snapshot,scope,group_pool,insights
+```
+
 
 ## 隐藏 Admin 配置页
 

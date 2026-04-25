@@ -18,6 +18,29 @@ import type { AdminConfig, AdminConfigResponse, AdminGroup } from './types'
 import './admin.css'
 
 const adminTokenStorageKey = 'statuscheck_admin_token'
+const publicFieldOptions: Array<{ value: AdminConfig['public_dashboard_fields'][number]; label: string; note: string }> = [
+  { value: 'costs', label: '成本字段', note: 'today_cost / total_cost / cost_7d / trend cost' },
+  { value: 'request_volume', label: '请求量字段', note: 'today_requests / rpm / qps / requests_7d' },
+  { value: 'token_volume', label: 'Token 量字段', note: 'tpm / tps / tokens_7d / trend tokens' },
+  { value: 'api_keys', label: 'API Key 数', note: 'total_api_keys / active_api_keys' },
+  { value: 'users', label: '用户数', note: 'active_users' },
+  { value: 'quota', label: '额度估算', note: 'quota_estimate' },
+  { value: 'model_usage', label: '模型用量', note: 'requests_7d / cost_7d / tokens_7d' },
+  { value: 'ops_counts', label: '底层请求计数', note: 'success_count / error_count / request_count' },
+]
+
+const publicCardOptions: Array<{ value: AdminConfig['public_dashboard_cards'][number]; label: string; note: string }> = [
+  { value: 'metric_monitor_items', label: '指标：监控项', note: '顶部监控项数量' },
+  { value: 'metric_healthy_models', label: '指标：探针正常', note: '顶部正常模型数量' },
+  { value: 'metric_abnormal_models', label: '指标：异常模型', note: '顶部异常模型数量' },
+  { value: 'metric_probe_groups', label: '指标：探针分组', note: '顶部探针分组覆盖' },
+  { value: 'model_groups', label: '分组模型', note: '主区域模型探针表' },
+  { value: 'snapshot', label: '快照', note: '更新时间、成功率、延迟、数据接口' },
+  { value: 'scope', label: '监控范围', note: '当前监控分组和探针覆盖' },
+  { value: 'group_pool', label: '分组账号池', note: '各分组账号可用/限流/异常/并发' },
+  { value: 'insights', label: '告警', note: '自动生成的提醒卡片' },
+]
+
 const sourceOptions: Array<{ value: AdminConfig['sub2api_monitor_model_sources'][number]; label: string; note: string }> = [
   { value: 'groups', label: '分组配置', note: '从 default_mapped_model / routing 派生' },
   { value: 'configured', label: '手动列表', note: '使用下方模型列表' },
@@ -46,6 +69,18 @@ function emptyConfig(): AdminConfig {
     sub2api_monitor_prompt: 'Reply with OK only.',
     sub2api_monitor_concurrency: 3,
     sub2api_monitor_probe_endpoint: 'chat_completions',
+    public_dashboard_fields: [],
+    public_dashboard_cards: [
+      'metric_monitor_items',
+      'metric_healthy_models',
+      'metric_abnormal_models',
+      'metric_probe_groups',
+      'model_groups',
+      'snapshot',
+      'scope',
+      'group_pool',
+      'insights',
+    ],
   }
 }
 
@@ -160,6 +195,26 @@ export default function AdminApp() {
       next.add(value)
     }
     patch({ sub2api_monitor_model_sources: [...next] })
+  }
+
+  function togglePublicField(value: AdminConfig['public_dashboard_fields'][number]) {
+    const next = new Set(config.public_dashboard_fields)
+    if (next.has(value)) {
+      next.delete(value)
+    } else {
+      next.add(value)
+    }
+    patch({ public_dashboard_fields: [...next] })
+  }
+
+  function togglePublicCard(value: AdminConfig['public_dashboard_cards'][number]) {
+    const next = new Set(config.public_dashboard_cards)
+    if (next.has(value)) {
+      next.delete(value)
+    } else {
+      next.add(value)
+    }
+    patch({ public_dashboard_cards: [...next] })
   }
 
   function updateGroupModels(groupId: number, value: string) {
@@ -347,6 +402,46 @@ export default function AdminApp() {
                       </span>
                     </button>
                   ))}
+                </div>
+              </ConfigCard>
+
+              <ConfigCard title="公开展示" subtitle="控制公开 API 字段和首页卡片；账号数量与可用率默认可公开，运营隐私字段默认不公开。">
+                <div className="admin-field">
+                  <label>允许出现在 /api/dashboard 的敏感字段</label>
+                  <div className="source-grid">
+                    {publicFieldOptions.map((option) => (
+                      <label key={option.value} className="source-option">
+                        <input
+                          type="checkbox"
+                          checked={config.public_dashboard_fields.includes(option.value)}
+                          onChange={() => togglePublicField(option.value)}
+                        />
+                        <span>
+                          {option.label}
+                          <small>{option.note}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="admin-field">
+                  <label>首页展示卡片</label>
+                  <div className="source-grid">
+                    {publicCardOptions.map((option) => (
+                      <label key={option.value} className="source-option">
+                        <input
+                          type="checkbox"
+                          checked={config.public_dashboard_cards.includes(option.value)}
+                          onChange={() => togglePublicCard(option.value)}
+                        />
+                        <span>
+                          {option.label}
+                          <small>{option.note}</small>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </ConfigCard>
 

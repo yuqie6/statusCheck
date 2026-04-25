@@ -6,14 +6,14 @@ export interface DashboardSummary {
   rate_limited_accounts: number
   error_accounts: number
   overload_accounts: number
-  total_api_keys: number
-  active_api_keys: number
-  active_users: number
-  today_requests: number
-  today_cost: number
-  total_cost: number
-  rpm: number
-  tpm: number
+  total_api_keys?: number
+  active_api_keys?: number
+  active_users?: number
+  today_requests?: number
+  today_cost?: number
+  total_cost?: number
+  rpm?: number
+  tpm?: number
   current_requests_per_minute: number
   current_active_requests: number
   success_rate_1h: number
@@ -26,8 +26,8 @@ export interface DashboardSummary {
   health_score: number
   stats_updated_at: string | null
   snapshot_generated_at: string | null
-  qps: { current: number; avg: number; peak: number }
-  tps: { current: number; avg: number; peak: number }
+  qps?: { current: number; avg: number; peak: number }
+  tps?: { current: number; avg: number; peak: number }
 }
 
 export interface QuotaEstimate {
@@ -44,7 +44,7 @@ export interface DailyTrendPoint {
   date: string
   requests: number
   cost: number
-  tokens: number
+  tokens?: number
 }
 
 export interface ModelRow {
@@ -52,9 +52,9 @@ export interface ModelRow {
   group_name: string
   model: string
   provider: string
-  requests_7d: number
-  cost_7d: number
-  tokens_7d: number
+  requests_7d?: number
+  cost_7d?: number
+  tokens_7d?: number
   catalog_available: boolean | null
   probe_status: string
   probe_latency_ms: number | null
@@ -84,8 +84,8 @@ export interface GroupRow {
   error_count: number
   concurrency_used: number
   concurrency_max: number
-  today_cost: number
-  total_cost: number
+  today_cost?: number
+  total_cost?: number
   sort_order: number
   status: string
 }
@@ -129,6 +129,27 @@ export interface GroupScopeInfo {
   include_exclusive_groups: boolean
 }
 
+export type PublicDashboardField =
+  | 'costs'
+  | 'request_volume'
+  | 'token_volume'
+  | 'api_keys'
+  | 'users'
+  | 'quota'
+  | 'model_usage'
+  | 'ops_counts'
+
+export type PublicDashboardCard =
+  | 'metric_monitor_items'
+  | 'metric_healthy_models'
+  | 'metric_abnormal_models'
+  | 'metric_probe_groups'
+  | 'model_groups'
+  | 'snapshot'
+  | 'scope'
+  | 'group_pool'
+  | 'insights'
+
 export interface DashboardResponse {
   generated_at: string
   config: {
@@ -140,10 +161,12 @@ export interface DashboardResponse {
     group_scope: GroupScopeInfo
     probe_groups: ProbeGroupRef[]
     probe_missing_groups: ProbeGroupRef[]
+    public_dashboard_fields: PublicDashboardField[]
+    public_dashboard_cards: PublicDashboardCard[]
   }
   summary: DashboardSummary
-  quota_estimate: QuotaEstimate
-  timeseries: {
+  quota_estimate?: QuotaEstimate
+  timeseries?: {
     daily: DailyTrendPoint[]
   }
   models: ModelRow[]
@@ -151,11 +174,11 @@ export interface DashboardResponse {
   pool: PoolSummary
   ops: {
     overview: {
-      success_count: number
-      error_count_total: number
-      request_count_total: number
+      success_count?: number
+      error_count_total?: number
+      request_count_total?: number
       upstream_error_rate: number
-      upstream_error_count_excl_429_529: number
+      upstream_error_count_excl_429_529?: number
     }
     duration: Record<string, number>
   }
@@ -197,6 +220,8 @@ export interface AdminConfig {
   sub2api_monitor_prompt: string
   sub2api_monitor_concurrency: number
   sub2api_monitor_probe_endpoint: 'chat_completions' | 'responses'
+  public_dashboard_fields: PublicDashboardField[]
+  public_dashboard_cards: PublicDashboardCard[]
 }
 
 export interface AdminGroup {

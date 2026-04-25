@@ -244,6 +244,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
 }
 
 .admin-card {
@@ -318,8 +319,7 @@
   background: #fff;
 }
 
-.admin-checkline,
-.source-option {
+.admin-checkline {
   display: flex;
   gap: 10px;
   align-items: flex-start;
@@ -331,10 +331,41 @@
   font-weight: 800;
 }
 
-.admin-checkline input,
-.source-option input {
+.source-option {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 800;
+  text-align: left;
+}
+
+.admin-checkline input {
   margin-top: 3px;
   accent-color: #4f46e5;
+}
+
+.source-option input {
+  justify-self: start;
+  margin-top: 3px;
+  accent-color: #4f46e5;
+}
+
+.source-option > span {
+  display: block;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.35;
+}
+
+.source-option small {
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 
 .group-picker,
